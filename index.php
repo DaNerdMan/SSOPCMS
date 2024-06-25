@@ -1,6 +1,6 @@
 <?php
 /**
- * SSOPCMS - Simple Single One-Page CMS (Multilingual Version with Blog)
+ * SSOPCMS - Super Simple One-Page CMS (Multilingual Version with Blog)
  * Copyright 2024 by Daniel Erdmann (madewithai.eu)
  * 
  * This script provides an advanced CMS functionality in a single file,
@@ -546,8 +546,8 @@ function saveBlogPost($post) {
         $post['id'] = uniqid();
     }
     if (!isset($post['timestamp'])) {
-        $post['timestamp'] = time();
-    }
+    $post['timestamp'] = time();
+}
     $config['blog_posts'][$post['id']] = $post;
     saveConfig($config);
 }
@@ -678,9 +678,11 @@ if (isset($_GET['action'])) {
                     'timestamp' => time()
                 ];
                 if (isset($_POST['id'])) {
-                    $post['id'] = $_POST['id'];
-                    $post['timestamp'] = $config['blog_posts'][$_POST['id']]['timestamp'];
-                }
+    $post['id'] = $_POST['id'];
+    $post['timestamp'] = $config['blog_posts'][$_POST['id']]['timestamp'];
+} else {
+    $post['timestamp'] = time();
+}
                 saveBlogPost($post);
                 header('Location: ?admin&blog');
                 exit;
@@ -688,15 +690,16 @@ if (isset($_GET['action'])) {
             break;
 
         case 'delete_post':
-            requireLogin();
-            if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
-                if (deleteBlogPost($_POST['id'])) {
-                    header('Location: ?admin&blog');
-                } else {
-                    $error = t('error_deleting_post');
-                }
-            }
-            break;
+    requireLogin();
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['id'])) {
+        if (deleteBlogPost($_POST['id'])) {
+            header('Location: ?admin&blog');
+            exit;
+        } else {
+            $error = t('error_deleting_post');
+        }
+    }
+    break;
     }
 }
 
@@ -1106,31 +1109,39 @@ if (isset($_GET['action'])) {
                             CKEDITOR.replace('post-editor');
                         </script>
                         <?php
-                    } else {
-                        $sorted_posts = sortBlogPosts($config['blog_posts'], $config['blog_sort_order']);
-                        if (empty($sorted_posts)) {
-                            echo "<p>" . t('no_posts') . "</p>";
-                        } else {
-                            foreach ($sorted_posts as $post_id => $post) {
-                                ?>
-                                <div class="blog-post">
-                                    <h2><?php echo e($post['title']); ?></h2>
-                                    <div class="blog-post-date"><?php echo e($post['date']); ?></div>
-                                    <div class="blog-post-content"><?php echo substr(strip_tags($post['content']), 0, 200) . '...'; ?></div>
-                                    <div class="blog-admin-actions">
-                                        <a href="?admin&blog&edit_post=<?php echo $post_id; ?>"><?php echo t('edit_post'); ?></a>
-                                        <a href="#" onclick="if(confirm('<?php echo t('confirm_delete'); ?>')) { document.getElementById('delete-post-<?php echo $post_id; ?>').submit(); }"><?php echo t('delete_post'); ?></a>
-                                        <form id="delete-post-<?php echo $post_id; ?>" action="?action=delete_post" method="post" style="display:none;">
-                                            <input type="hidden" name="id" value="<?php echo $post_id; ?>">
-                                        </form>
-                                    </div>
-                                </div>
-                                <?php
-                            }
-                        }
-                    }
-                } else {
-                    ?>
+} else {
+    // Sortiere die Posts für die Anzeige im Backend
+    $sorted_posts = sortBlogPosts($config['blog_posts'], $config['blog_sort_order']);
+    
+    if (empty($config['blog_posts'])) {
+        echo "<p>" . t('no_posts') . "</p>";
+    } else {
+        foreach ($sorted_posts as $sorted_post_id => $post) {
+            // Finde die ursprüngliche post_id basierend auf dem Titel und Datum
+            $original_post_id = array_search($post, $config['blog_posts']);
+            if ($original_post_id === false) {
+                // Fallback, falls keine Übereinstimmung gefunden wurde
+                $original_post_id = $sorted_post_id;
+            }
+            ?>
+            <div class="blog-post">
+                <h2><?php echo e($post['title']); ?></h2>
+                <div class="blog-post-date"><?php echo e($post['date']); ?></div>
+                <div class="blog-post-content"><?php echo substr(strip_tags($post['content']), 0, 200) . '...'; ?></div>
+                <div class="blog-admin-actions">
+                    <a href="?admin&blog&edit_post=<?php echo $original_post_id; ?>"><?php echo t('edit_post'); ?></a>
+                    <a href="#" onclick="if(confirm('<?php echo t('confirm_delete'); ?>')) { document.getElementById('delete-post-<?php echo $original_post_id; ?>').submit(); }"><?php echo t('delete_post'); ?></a>
+                    <form id="delete-post-<?php echo $original_post_id; ?>" action="?action=delete_post" method="post" style="display:none;">
+                        <input type="hidden" name="id" value="<?php echo $original_post_id; ?>">
+                    </form>
+                </div>
+            </div>
+            <?php
+        }
+    }
+}
+} else {
+    ?>
                     <h2><?php echo t('admin_panel'); ?></h2>
                     <div class="unsaved-changes"><?php echo t('unsaved_changes'); ?></div>
                     
